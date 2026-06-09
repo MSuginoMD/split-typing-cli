@@ -120,4 +120,12 @@ def get_prompts(language: str, level: int, count: int, seed: int | None = None) 
     if count <= len(source):
         rng.shuffle(source)
         return source[:count]
-    return [rng.choice(source) for _ in range(count)]
+    # When more prompts are requested than exist, cycle through full shuffled
+    # passes instead of picking each one independently. This spreads repeats
+    # out evenly rather than clustering the same prompt several times in a row.
+    result: list[str] = []
+    while len(result) < count:
+        batch = list(source)
+        rng.shuffle(batch)
+        result.extend(batch)
+    return result[:count]

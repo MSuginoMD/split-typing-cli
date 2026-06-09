@@ -32,6 +32,13 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(result.errors, 1)
         self.assertEqual(result.mismatches, [(4, "", "d")])
 
+    def test_fullwidth_space_matches_halfwidth(self):
+        result = score_attempt("みないで うつ", "みないで　うつ", seconds=1.0)
+
+        self.assertEqual(result.accuracy, 1.0)
+        self.assertEqual(result.errors, 0)
+        self.assertEqual(result.mismatches, [])
+
     def test_zero_seconds_is_clamped_for_speed(self):
         result = score_attempt("abcde", "abcde", seconds=0.0)
 

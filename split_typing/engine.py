@@ -16,12 +16,20 @@ class Score:
     mismatches: list[tuple[int, str, str]]
 
 
+def _normalize(text: str) -> str:
+    # Treat the IME full-width space (U+3000) as a normal space so Japanese
+    # prompts typed with a kana IME aren't penalized for the space character.
+    return text.replace("　", " ")
+
+
 def score_attempt(expected: str, actual: str, seconds: float) -> Score:
     elapsed = max(seconds, 0.001)
     mismatches: list[tuple[int, str, str]] = []
     matches = 0
 
-    for index, (want, got) in enumerate(zip_longest(expected, actual, fillvalue=""), start=1):
+    norm_expected = _normalize(expected)
+    norm_actual = _normalize(actual)
+    for index, (want, got) in enumerate(zip_longest(norm_expected, norm_actual, fillvalue=""), start=1):
         if want == got:
             matches += 1
         else:
