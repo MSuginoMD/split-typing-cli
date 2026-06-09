@@ -1,0 +1,43 @@
+import unittest
+
+from split_typing.engine import score_attempt
+
+
+class EngineTests(unittest.TestCase):
+    def test_exact_match_scores_full_accuracy(self):
+        result = score_attempt("split", "split", seconds=6.0)
+
+        self.assertEqual(result.accuracy, 1.0)
+        self.assertEqual(result.errors, 0)
+        self.assertEqual(result.wpm, 10.0)
+        self.assertEqual(result.cpm, 50.0)
+
+    def test_typo_reports_first_mismatches(self):
+        result = score_attempt("split", "spilt", seconds=3.0)
+
+        self.assertEqual(result.errors, 2)
+        self.assertEqual(result.mismatches[:2], [(3, "l", "i"), (4, "i", "l")])
+        self.assertAlmostEqual(result.accuracy, 0.6)
+
+    def test_empty_input_scores_zero_accuracy(self):
+        result = score_attempt("abc", "", seconds=1.0)
+
+        self.assertEqual(result.accuracy, 0.0)
+        self.assertEqual(result.errors, 3)
+        self.assertEqual(result.mismatches, [(1, "a", ""), (2, "b", ""), (3, "c", "")])
+
+    def test_extra_input_counts_as_errors(self):
+        result = score_attempt("abc", "abcd", seconds=1.0)
+
+        self.assertEqual(result.errors, 1)
+        self.assertEqual(result.mismatches, [(4, "", "d")])
+
+    def test_zero_seconds_is_clamped_for_speed(self):
+        result = score_attempt("abcde", "abcde", seconds=0.0)
+
+        self.assertGreater(result.wpm, 0)
+        self.assertGreater(result.cpm, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
