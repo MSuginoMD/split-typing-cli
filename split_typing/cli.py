@@ -9,8 +9,7 @@ from split_typing.engine import RealtimeSession, Score, score_attempt
 from split_typing.input_capture import read_keys, supports_raw
 from split_typing.llm import generate_prompts
 from split_typing.prompts import available_languages, get_prompts, levels_for_language
-from split_typing import reading
-from split_typing.reading import to_hiragana
+from split_typing.reading import pykakasi_available, to_hiragana
 from split_typing.stats import KeyStats
 
 
@@ -41,12 +40,23 @@ def main(argv: list[str] | None = None) -> int:
         print_weak_keys(stats)
         return 0
 
+    # Interactive launch: when the track wasn't given on the command line we
+    # prompt for everything (language, level, and whether to use the LLM) so the
+    # tool is usable as a menu, not just via flags.
+    interactive = args.language is None and sys.stdin.isatty()
+
     language = args.language or choose_language()
     level = args.level or choose_level(language)
     count = max(args.count, 1)
 
+    use_llm = args.llm
+    if interactive and not use_llm:
+        use_llm = choose_yes_no(
+            "Generate fresh prompts with a local Ollama model (slower)?", default=False
+        )
+
     prompts = []
-    if args.llm:
+    if use_llm:
         print(f"Generating prompts with Ollama model {args.model}...")
         prompts = generate_prompts(language, level, count, args.model)
         if not prompts:
@@ -57,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
 
     use_realtime = not args.classic and supports_raw()
 
-    if use_realtime and language == "japanese" and not reading.pykakasi_available():
+    if use_realtime and language == "japanese" and not pykakasi_available():
         print(
             "Warning: pykakasi is not installed; kanji cannot be converted to hiragana.\n"
             "Falling back to classic (line-input) mode."
@@ -79,9 +89,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nTrack: {language}  Level: {level}  Prompts: {len(pairs)}")
         print("Type each prompt. ESC/Tab to skip, Ctrl-C to quit.\n")
         try:
-            for index, (display, reading) in enumerate(pairs, start=1):
+            for index, (display, reading_kana) in enumerate(pairs, start=1):
                 print(f"[{index}/{len(pairs)}] ", end="")
-                run_realtime_prompt(display, reading, stats, color)
+                run_realtime_prompt(display, reading_kana, stats, color)
         except KeyboardInterrupt:
             print()
         finally:
@@ -102,21 +112,42 @@ def print_catalog() -> None:
 
 def choose_language() -> str:
     languages = available_languages()
+    print("Choose a language:")
+    for i, lang in enumerate(languages, start=1):
+        print(f"  {i}. {lang}")
     while True:
-        print_catalog()
-        choice = input("language> ").strip().lower()
+        choice = input("language (number or name)> ").strip().lower()
+        if choice.isdigit() and 1 <= int(choice) <= len(languages):
+            return languages[int(choice) - 1]
         if choice in languages:
             return choice
-        print("Choose one of: " + ", ".join(languages))
+        print("Enter a number 1-%d or one of: %s" % (len(languages), ", ".join(languages)))
 
 
 def choose_level(language: str) -> int:
     levels = levels_for_language(language)
+    hints = {1: "short words", 2: "short phrases", 3: "sentences", 4: "longer text"}
+    print(f"Choose a level for {language}:")
+    for lvl in levels:
+        print(f"  {lvl}. {hints.get(lvl, '')}".rstrip())
     while True:
-        choice = input(f"level {levels}> ").strip()
+        choice = input("level> ").strip()
         if choice.isdigit() and int(choice) in levels:
             return int(choice)
-        print("Choose level 1, 2, 3, or 4.")
+        print("Choose one of: " + ", ".join(str(lvl) for lvl in levels))
+
+
+def choose_yes_no(question: str, default: bool = False) -> bool:
+    suffix = " [y/N]> " if not default else " [Y/n]> "
+    while True:
+        choice = input(question + suffix).strip().lower()
+        if not choice:
+            return default
+        if choice in ("y", "yes"):
+            return True
+        if choice in ("n", "no"):
+            return False
+        print("Please answer y or n.")
 
 
 def print_weak_keys(stats: KeyStats) -> None:
