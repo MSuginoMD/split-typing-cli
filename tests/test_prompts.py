@@ -1,6 +1,6 @@
 import unittest
 
-from split_typing.prompts import available_languages, get_prompts, levels_for_language
+from split_typing.prompts import available_languages, get_prompts, levels_for_language, PROMPTS
 
 
 class PromptTests(unittest.TestCase):
@@ -24,6 +24,20 @@ class PromptTests(unittest.TestCase):
     def test_invalid_level_raises_clear_error(self):
         with self.assertRaisesRegex(ValueError, "level"):
             get_prompts("python", 9, count=1)
+
+
+class TestBankSize(unittest.TestCase):
+    def test_japanese_levels_have_more_variety(self):
+        for level in (1, 2, 3, 4):
+            self.assertGreaterEqual(len(PROMPTS["japanese"][level]), 12)
+
+    def test_english_levels_have_more_variety(self):
+        for level in (1, 2, 3, 4):
+            self.assertGreaterEqual(len(PROMPTS["english"][level]), 12)
+
+    def test_python_levels_have_more_variety(self):
+        for level in (1, 2, 3, 4):
+            self.assertGreaterEqual(len(PROMPTS["python"][level]), 12)
 
 
 if __name__ == "__main__":
