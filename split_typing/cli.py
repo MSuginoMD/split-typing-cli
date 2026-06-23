@@ -4,9 +4,14 @@ import argparse
 import sys
 import time
 
-from split_typing.engine import Score, score_attempt
+from split_typing.adaptive import select_adaptive
+from split_typing.engine import RealtimeSession, Score, score_attempt
+from split_typing.input_capture import read_keys, supports_raw
 from split_typing.llm import generate_prompts
 from split_typing.prompts import available_languages, get_prompts, levels_for_language
+from split_typing import reading
+from split_typing.reading import to_hiragana
+from split_typing.stats import KeyStats
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,6 +23,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm", action="store_true", help="try generating prompts with Ollama")
     parser.add_argument("--model", default="gemma4:26b", help="Ollama model name")
     parser.add_argument("--list", action="store_true", help="list tracks and levels")
+    parser.add_argument("--classic", action="store_true", help="line-input mode")
+    parser.add_argument("--adaptive", action="store_true", help="bias prompts to weak keys")
+    parser.add_argument("--stats", action="store_true", help="show weak keys and exit")
+    parser.add_argument("--no-color", action="store_true", help="disable ANSI color")
     return parser
 
 
@@ -25,6 +34,11 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.list:
         print_catalog()
+        return 0
+
+    if args.stats:
+        stats = KeyStats.load()
+        print_weak_keys(stats)
         return 0
 
     language = args.language or choose_language()
@@ -40,6 +54,39 @@ def main(argv: list[str] | None = None) -> int:
 
     if not prompts:
         prompts = get_prompts(language, level, count, args.seed)
+
+    use_realtime = not args.classic and supports_raw()
+
+    if use_realtime and language == "japanese" and not reading.pykakasi_available():
+        print(
+            "Warning: pykakasi is not installed; kanji cannot be converted to hiragana.\n"
+            "Falling back to classic (line-input) mode."
+        )
+        use_realtime = False
+
+    if use_realtime:
+        if args.adaptive:
+            stats = KeyStats.load()
+            prompts = select_adaptive(prompts, language, stats, count, args.seed)
+        else:
+            stats = KeyStats.load()
+
+        color = not args.no_color
+        pairs = [
+            (p, to_hiragana(p) if language == "japanese" else p)
+            for p in prompts
+        ]
+        print(f"\nTrack: {language}  Level: {level}  Prompts: {len(pairs)}")
+        print("Type each prompt. ESC/Tab to skip, Ctrl-C to quit.\n")
+        try:
+            for index, (display, reading) in enumerate(pairs, start=1):
+                print(f"[{index}/{len(pairs)}] ", end="")
+                run_realtime_prompt(display, reading, stats, color)
+        except KeyboardInterrupt:
+            print()
+        finally:
+            stats.save()
+        return 0
 
     scores = run_session(language, level, prompts)
     print_summary(scores)
@@ -70,6 +117,50 @@ def choose_level(language: str) -> int:
         if choice.isdigit() and int(choice) in levels:
             return int(choice)
         print("Choose level 1, 2, 3, or 4.")
+
+
+def print_weak_keys(stats: KeyStats) -> None:
+    weak = stats.weakest(10)
+    if not weak:
+        print("No stats yet. Do a realtime session first.")
+        return
+    print("Weakest keys (worst first):")
+    for k in weak:
+        e = stats.data[k]
+        rate = e["errors"] / e["count"] * 100
+        print(f"  {k!r}: {rate:.0f}% errors, {e['ema_ms']:.0f}ms avg, n={e['count']}")
+
+
+def _render(sess: RealtimeSession, color: bool) -> None:
+    typed = sess.typed
+    if color:
+        line = f"\r\x1b[2K{typed}\x1b[90m{sess.hint}\x1b[0m"
+    else:
+        line = f"\r\x1b[2K{typed}|{sess.hint}"
+    print(line, end="", flush=True)
+
+
+def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool) -> bool:
+    sess = RealtimeSession(reading, stats=stats)
+    print(display)
+    last = time.perf_counter()
+    keys = read_keys()
+    for ch in keys:
+        if ch in ("\x1b", "\t"):   # ESC / Tab -> skip prompt
+            print("  [skipped]")
+            return False
+        now = time.perf_counter()
+        ms = (now - last) * 1000.0
+        last = now
+        if ch in ("\x7f", "\b"):
+            sess.backspace()
+        else:
+            sess.key(ch, ms)
+        _render(sess, color)
+        if sess.done:
+            print()
+            return True
+    return False
 
 
 def run_session(language: str, level: int, prompts: list[str]) -> list[Score]:

@@ -51,3 +51,37 @@ def score_attempt(expected: str, actual: str, seconds: float) -> Score:
         cpm=round(cpm, 2),
         mismatches=mismatches[:8],
     )
+
+
+from split_typing.romaji import RomajiMatcher
+from split_typing.stats import KeyStats
+
+
+class RealtimeSession:
+    def __init__(self, reading: str, stats: KeyStats | None = None) -> None:
+        self.matcher = RomajiMatcher(reading)
+        self.stats = stats
+        self.errors = 0
+
+    @property
+    def done(self) -> bool:
+        return self.matcher.done
+
+    @property
+    def typed(self) -> str:
+        return self.matcher.typed
+
+    @property
+    def hint(self) -> str:
+        return self.matcher.hint
+
+    def key(self, ch: str, ms: float) -> str:
+        result = self.matcher.feed(ch)
+        if result == "wrong":
+            self.errors += 1
+        if self.stats is not None:
+            self.stats.record(ch, ms, error=(result == "wrong"))
+        return result
+
+    def backspace(self) -> None:
+        self.matcher.backspace()

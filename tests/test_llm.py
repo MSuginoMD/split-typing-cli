@@ -2,7 +2,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from split_typing.llm import generate_prompts, parse_generated_lines
+from split_typing.llm import build_request, generate_prompts, parse_generated_lines
 
 
 class LlmTests(unittest.TestCase):
@@ -50,6 +50,17 @@ class LlmTests(unittest.TestCase):
     @patch("split_typing.llm.subprocess.run", side_effect=OSError("missing"))
     def test_generate_prompts_returns_empty_list_on_failure(self, run):
         self.assertEqual(generate_prompts("python", 3, 4, "gemma4"), [])
+
+
+class TestBuildRequest(unittest.TestCase):
+    def test_japanese_request_asks_for_natural(self):
+        req = build_request("japanese", 3, 10)
+        self.assertIn("Japanese", req)
+        self.assertIn("10", req)
+
+    def test_english_request(self):
+        req = build_request("english", 1, 8)
+        self.assertIn("8", req)
 
 
 if __name__ == "__main__":
