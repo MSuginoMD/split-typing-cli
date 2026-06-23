@@ -111,3 +111,23 @@ class TestRomajiMatcher(unittest.TestCase):
         m, res = _type("ん", "nn")
         self.assertTrue(m.done)
         self.assertNotIn("wrong", res)
+
+
+class TestMatcherAux(unittest.TestCase):
+    def test_backspace(self):
+        m = RomajiMatcher("か")
+        m.feed("k")
+        self.assertTrue(m.backspace())
+        self.assertEqual(m.typed, "")
+        self.assertFalse(m.backspace())  # nothing to remove
+
+    def test_expected_chars(self):
+        m = RomajiMatcher("し")
+        self.assertEqual(m.expected_chars, {"s"})  # shi / si both start with s
+
+    def test_hint(self):
+        m = RomajiMatcher("にほん")
+        self.assertEqual(m.hint, "nihon")
+        m.feed("n")
+        m.feed("i")
+        self.assertEqual(m.hint, "hon")

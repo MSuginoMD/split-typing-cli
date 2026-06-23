@@ -185,3 +185,45 @@ class RomajiMatcher:
             self._advance()
             return self.feed(ch)
         return "wrong"
+
+    @property
+    def expected_chars(self) -> set[str]:
+        if self.done:
+            return set()
+        seg = self._current()
+        out: set[str] = set()
+        for v in seg:
+            if v.startswith(self.buf) and len(v) > len(self.buf):
+                out.add(v[len(self.buf)])
+        if not out and self.buf in seg and self.seg_index + 1 < len(self.segments):
+            for v in self.segments[self.seg_index + 1]:
+                if v:
+                    out.add(v[0])
+        return out
+
+    @property
+    def hint(self) -> str:
+        if self.done:
+            return ""
+        seg = self._current()
+        # first variant that still matches the buffer, minus what's typed
+        rest = ""
+        for v in seg:
+            if v.startswith(self.buf):
+                rest = v[len(self.buf):]
+                break
+        tail = "".join(self.segments[k][0] for k in range(self.seg_index + 1, len(self.segments)))
+        return rest + tail
+
+    def backspace(self) -> bool:
+        if not self._typed:
+            return False
+        self._typed.pop()
+        # rebuild state from scratch up to the new typed string
+        typed = "".join(self._typed)
+        self.seg_index = 0
+        self.buf = ""
+        self._typed = []
+        for c in typed:
+            self.feed(c)
+        return True
