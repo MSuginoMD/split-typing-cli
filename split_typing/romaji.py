@@ -78,3 +78,59 @@ def romaji_variants(unit: str) -> list[str]:
     if unit in ROMAJI_TABLE:
         return list(ROMAJI_TABLE[unit])
     return [unit]  # pass-through: space, punctuation, ascii
+
+
+_VOWEL_STARTS = ("a", "i", "u", "e", "o")
+
+
+def build_segments(reading: str) -> list[list[str]]:
+    units = tokenize_kana(reading)
+    segments: list[list[str]] = []
+    i = 0
+    while i < len(units):
+        unit = units[i]
+
+        if unit == "っ":
+            # double the leading consonant of the NEXT unit's variants
+            if i + 1 < len(units):
+                nxt = romaji_variants(units[i + 1])
+                doubled = []
+                for v in nxt:
+                    if v and v[0] not in _VOWEL_STARTS and v[0].isalpha():
+                        doubled.append(v[0] + v)
+                    else:
+                        doubled.append(v)  # vowel-initial: no doubling
+                segments.append(doubled)
+                i += 2
+            else:
+                i += 1  # trailing sokuon: drop
+            continue
+
+        if unit == "ー":
+            # long vowel: hyphen, or repeat previous vowel if known
+            variants = ["-"]
+            if segments:
+                prev = segments[-1][0]
+                if prev and prev[-1] in _VOWEL_STARTS:
+                    variants.append(prev[-1])
+            segments.append(variants)
+            i += 1
+            continue
+
+        if unit == "ん":
+            variants = list(romaji_variants("ん"))  # n, nn, n'
+            nxt_starts_vowelish = False
+            if i + 1 < len(units):
+                nxt = romaji_variants(units[i + 1])
+                nxt_starts_vowelish = any(
+                    v and (v[0] in _VOWEL_STARTS or v[0] in ("n", "y")) for v in nxt
+                )
+            if nxt_starts_vowelish and "n" in variants:
+                variants.remove("n")
+            segments.append(variants)
+            i += 1
+            continue
+
+        segments.append(romaji_variants(unit))
+        i += 1
+    return segments

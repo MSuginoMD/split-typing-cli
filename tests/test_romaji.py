@@ -1,5 +1,5 @@
 import unittest
-from split_typing.romaji import tokenize_kana, romaji_variants
+from split_typing.romaji import tokenize_kana, romaji_variants, build_segments
 
 
 class TestTokenizeKana(unittest.TestCase):
@@ -39,3 +39,29 @@ class TestRomajiVariants(unittest.TestCase):
 
     def test_chi_youon_has_cya(self):
         self.assertIn("cya", romaji_variants("ちゃ"))
+
+
+class TestBuildSegments(unittest.TestCase):
+    def test_plain(self):
+        self.assertEqual(build_segments("か"), [["ka"]])
+
+    def test_sokuon_doubles_next_consonant(self):
+        # がっこう -> ga / っこ(=kko) / う
+        segs = build_segments("がっこう")
+        self.assertEqual(segs[0], ["ga"])
+        self.assertIn("kko", segs[1])
+        self.assertEqual(segs[2], ["u"])
+
+    def test_n_keeps_bare_before_consonant(self):
+        # にほん だ -> ...ん before space/da: bare n allowed
+        segs = build_segments("ほんだ")
+        n_seg = segs[1]
+        self.assertIn("n", n_seg)
+        self.assertIn("nn", n_seg)
+
+    def test_n_drops_bare_before_vowel(self):
+        # れんあい -> ん before あ(vowel): bare n NOT allowed
+        segs = build_segments("れんあい")
+        n_seg = segs[1]
+        self.assertNotIn("n", n_seg)
+        self.assertIn("nn", n_seg)
