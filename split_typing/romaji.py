@@ -166,6 +166,7 @@ class RomajiMatcher:
                 self._just_completed_n = False
                 self._typed.append(ch)
                 return "complete"
+            self._just_completed_n = False
             return "wrong"
         seg = self._current()
         cand = self.buf + ch
