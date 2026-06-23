@@ -33,3 +33,9 @@ class TestRomajiVariants(unittest.TestCase):
     def test_passthrough(self):
         self.assertEqual(romaji_variants(" "), [" "])
         self.assertEqual(romaji_variants("、"), ["、"])
+
+    def test_dji_youon_present(self):
+        self.assertEqual(romaji_variants("ぢゃ"), ["dya", "jya"])
+
+    def test_chi_youon_has_cya(self):
+        self.assertIn("cya", romaji_variants("ちゃ"))

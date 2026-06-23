@@ -54,7 +54,7 @@ ROMAJI_TABLE: dict[str, list[str]] = {
     # youon (i-column + small-y)
     "きゃ": ["kya"], "きゅ": ["kyu"], "きょ": ["kyo"],
     "しゃ": ["sha", "sya"], "しゅ": ["shu", "syu"], "しょ": ["sho", "syo"],
-    "ちゃ": ["cha", "tya"], "ちゅ": ["chu", "tyu"], "ちょ": ["cho", "tyo"],
+    "ちゃ": ["cha", "tya", "cya"], "ちゅ": ["chu", "tyu", "cyu"], "ちょ": ["cho", "tyo", "cyo"],
     "にゃ": ["nya"], "にゅ": ["nyu"], "にょ": ["nyo"],
     "ひゃ": ["hya"], "ひゅ": ["hyu"], "ひょ": ["hyo"],
     "みゃ": ["mya"], "みゅ": ["myu"], "みょ": ["myo"],
@@ -62,6 +62,7 @@ ROMAJI_TABLE: dict[str, list[str]] = {
     # dakuten youon
     "ぎゃ": ["gya"], "ぎゅ": ["gyu"], "ぎょ": ["gyo"],
     "じゃ": ["ja", "zya", "jya"], "じゅ": ["ju", "zyu", "jyu"], "じょ": ["jo", "zyo", "jyo"],
+    "ぢゃ": ["dya", "jya"], "ぢゅ": ["dyu", "jyu"], "ぢょ": ["dyo", "jyo"],
     "びゃ": ["bya"], "びゅ": ["byu"], "びょ": ["byo"],
     # handakuten youon
     "ぴゃ": ["pya"], "ぴゅ": ["pyu"], "ぴょ": ["pyo"],
