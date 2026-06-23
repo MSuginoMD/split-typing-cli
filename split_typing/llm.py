@@ -33,6 +33,34 @@ def _dedup_key(line: str) -> str:
     return re.sub(r"\s+", " ", lowered).strip()
 
 
+def build_request(language: str, level: int, overfetch: int) -> str:
+    """Build the prompt request string for LLM generation.
+
+    Args:
+        language: Target language for prompts (e.g., "english", "japanese")
+        level: Difficulty level where 1 is short and 4 is longer
+        overfetch: Number of prompts to request (before deduplication)
+
+    Returns:
+        The complete request string to send to ollama
+    """
+    base = (
+        "Create typing practice prompts for a local CLI typing trainer.\n"
+        f"Language track: {language}\n"
+        f"Difficulty level: {level} where 1 is short words and 4 is longer text.\n"
+        f"Return exactly {overfetch} plain lines. No numbering, no markdown, no explanation.\n"
+        "Every line must be DISTINCT: vary the vocabulary, topic, sentence shape, and "
+        "starting word. Do not reuse the same phrases or restate the same idea across lines.\n"
+    )
+    if language == "japanese":
+        base += (
+            "Write natural everyday Japanese sentences using normal kanji and kana. "
+            "Avoid childish all-hiragana text. One natural sentence per line.\n"
+        )
+    base += "Make prompts useful for adapting to a split keyboard. Keep each line typeable in a terminal."
+    return base
+
+
 def parse_generated_lines(text: str, count: int) -> list[str]:
     prompts: list[str] = []
     seen: set[str] = set()
@@ -59,15 +87,7 @@ def generate_prompts(language: str, level: int, count: int, model: str = "gemma4
     # Over-fetch so that, after dropping duplicates, we still have enough distinct
     # prompts to reach `count`.
     overfetch = count + max(count, 5)
-    request = (
-        "Create typing practice prompts for a local CLI typing trainer.\n"
-        f"Language track: {language}\n"
-        f"Difficulty level: {level} where 1 is short words and 4 is longer text.\n"
-        f"Return exactly {overfetch} plain lines. No numbering, no markdown, no explanation.\n"
-        "Every line must be DISTINCT: vary the vocabulary, topic, sentence shape, and "
-        "starting word. Do not reuse the same phrases or restate the same idea across lines.\n"
-        "Make prompts useful for adapting to a split keyboard. Keep each line typeable in a terminal."
-    )
+    request = build_request(language, level, overfetch)
     try:
         completed = subprocess.run(
             # --think=false suppresses chain-of-thought output from reasoning
