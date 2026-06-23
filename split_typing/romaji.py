@@ -127,6 +127,9 @@ def build_segments(reading: str) -> list[list[str]]:
                 )
             if nxt_starts_vowelish and "n" in variants:
                 variants.remove("n")
+            elif not nxt_starts_vowelish and i + 1 >= len(units):
+                # Final ん: only n needed, remove nn and n'
+                variants = ["n"]
             segments.append(variants)
             i += 1
             continue
@@ -134,3 +137,45 @@ def build_segments(reading: str) -> list[list[str]]:
         segments.append(romaji_variants(unit))
         i += 1
     return segments
+
+
+class RomajiMatcher:
+    def __init__(self, reading: str) -> None:
+        self.segments = build_segments(reading)
+        self.seg_index = 0
+        self.buf = ""
+        self._typed: list[str] = []
+
+    @property
+    def done(self) -> bool:
+        return self.seg_index >= len(self.segments)
+
+    @property
+    def typed(self) -> str:
+        return "".join(self._typed)
+
+    def _current(self) -> list[str]:
+        return self.segments[self.seg_index]
+
+    def _advance(self) -> None:
+        self.seg_index += 1
+        self.buf = ""
+
+    def feed(self, ch: str) -> str:
+        if self.done:
+            return "wrong"
+        seg = self._current()
+        cand = self.buf + ch
+        if any(v.startswith(cand) for v in seg):
+            self.buf = cand
+            self._typed.append(ch)
+            longer = any(len(v) > len(cand) and v.startswith(cand) for v in seg)
+            if cand in seg and not longer:
+                self._advance()
+                return "complete"
+            return "correct"
+        # ch does not extend current buffer
+        if self.buf in seg:  # current segment already complete -> finalize, re-feed
+            self._advance()
+            return self.feed(ch)
+        return "wrong"

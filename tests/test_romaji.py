@@ -1,5 +1,5 @@
 import unittest
-from split_typing.romaji import tokenize_kana, romaji_variants, build_segments
+from split_typing.romaji import tokenize_kana, romaji_variants, build_segments, RomajiMatcher
 
 
 class TestTokenizeKana(unittest.TestCase):
@@ -65,3 +65,38 @@ class TestBuildSegments(unittest.TestCase):
         n_seg = segs[1]
         self.assertNotIn("n", n_seg)
         self.assertIn("nn", n_seg)
+
+
+def _type(reading, text):
+    m = RomajiMatcher(reading)
+    results = [m.feed(c) for c in text]
+    return m, results
+
+
+class TestRomajiMatcher(unittest.TestCase):
+    def test_simple_word(self):
+        m, res = _type("にほん", "nihon")
+        self.assertTrue(m.done)
+        self.assertNotIn("wrong", res)
+
+    def test_alt_spelling(self):
+        m, _ = _type("し", "si")
+        self.assertTrue(m.done)
+        m2, _ = _type("し", "shi")
+        self.assertTrue(m2.done)
+
+    def test_double_n(self):
+        m, _ = _type("れんあい", "rennai")
+        self.assertTrue(m.done)
+
+    def test_sokuon(self):
+        m, _ = _type("がっこう", "gakkou")
+        self.assertTrue(m.done)
+
+    def test_wrong_char(self):
+        m = RomajiMatcher("か")
+        self.assertEqual(m.feed("x"), "wrong")
+        self.assertFalse(m.done)
+        self.assertEqual(m.feed("k"), "correct")
+        self.assertEqual(m.feed("a"), "complete")
+        self.assertTrue(m.done)
