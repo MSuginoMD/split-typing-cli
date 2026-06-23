@@ -20,6 +20,13 @@ class TestKeyStatsIO(unittest.TestCase):
             again = KeyStats.load(p)
             self.assertEqual(again.data["k"]["count"], 1)
 
+    def test_invalid_json_is_empty(self):
+        with TemporaryDirectory() as d:
+            p = Path(d) / "bad.json"
+            p.write_text("not valid json", encoding="utf-8")
+            s = KeyStats.load(p)
+            self.assertEqual(s.data, {})
+
 
 class TestKeyStatsScoring(unittest.TestCase):
     def _fresh(self):
