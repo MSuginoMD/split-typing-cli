@@ -100,3 +100,18 @@ class TestRomajiMatcher(unittest.TestCase):
         self.assertEqual(m.feed("k"), "correct")
         self.assertEqual(m.feed("a"), "complete")
         self.assertTrue(m.done)
+
+    def test_word_final_n_single(self):
+        m, res = _type("にほん", "nihon")
+        self.assertTrue(m.done)
+        self.assertNotIn("wrong", res)
+
+    def test_word_final_n_double(self):
+        m, res = _type("にほん", "nihonn")
+        self.assertTrue(m.done)
+        self.assertNotIn("wrong", res)
+
+    def test_standalone_n_double(self):
+        m, res = _type("ん", "nn")
+        self.assertTrue(m.done)
+        self.assertNotIn("wrong", res)

@@ -127,9 +127,6 @@ def build_segments(reading: str) -> list[list[str]]:
                 )
             if nxt_starts_vowelish and "n" in variants:
                 variants.remove("n")
-            elif not nxt_starts_vowelish and i + 1 >= len(units):
-                # Final ん: only n needed, remove nn and n'
-                variants = ["n"]
             segments.append(variants)
             i += 1
             continue
@@ -145,6 +142,7 @@ class RomajiMatcher:
         self.seg_index = 0
         self.buf = ""
         self._typed: list[str] = []
+        self._just_completed_n = False  # last segment completed by a bare "ん"=n
 
     @property
     def done(self) -> bool:
@@ -163,14 +161,21 @@ class RomajiMatcher:
 
     def feed(self, ch: str) -> str:
         if self.done:
+            # Absorb a redundant trailing "n" so word-final ん typed as "nn" is OK.
+            if ch == "n" and self._just_completed_n:
+                self._just_completed_n = False
+                self._typed.append(ch)
+                return "complete"
             return "wrong"
         seg = self._current()
         cand = self.buf + ch
         if any(v.startswith(cand) for v in seg):
             self.buf = cand
             self._typed.append(ch)
+            is_last = self.seg_index == len(self.segments) - 1
             longer = any(len(v) > len(cand) and v.startswith(cand) for v in seg)
-            if cand in seg and not longer:
+            if cand in seg and (not longer or is_last):
+                self._just_completed_n = cand == "n"
                 self._advance()
                 return "complete"
             return "correct"
