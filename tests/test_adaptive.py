@@ -29,3 +29,7 @@ class TestAdaptive(unittest.TestCase):
         a = select_adaptive(prompts, "english", stats, 3, seed=7)
         b = select_adaptive(prompts, "english", stats, 3, seed=7)
         self.assertEqual(a, b)
+
+    def test_load_counts_weak_keys_japanese(self):
+        # 東京 -> とうきょう -> "toukyou"; weak key "t" appears once
+        self.assertEqual(prompt_weak_key_load("東京", "japanese", {"t"}), 1)

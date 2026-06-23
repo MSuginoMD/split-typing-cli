@@ -31,11 +31,7 @@ def select_adaptive(
     weak = set(stats.weakest(8))
     weights = [1.0 + prompt_weak_key_load(p, language, weak) for p in prompts]
     rng = random.Random(seed)
-    # weighted sampling without immediate repeats where possible
     picks: list[str] = []
-    pool = list(prompts)
-    pool_w = list(weights)
     for _ in range(count):
-        chosen = rng.choices(pool, weights=pool_w, k=1)[0]
-        picks.append(chosen)
+        picks.append(rng.choices(prompts, weights=weights, k=1)[0])
     return picks
