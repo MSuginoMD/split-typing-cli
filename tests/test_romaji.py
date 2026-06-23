@@ -120,6 +120,21 @@ class TestRomajiMatcher(unittest.TestCase):
         self.assertTrue(m.done)
         self.assertNotIn("wrong", res)
 
+    def test_loanword_combos_typable(self):
+        cases = [("てぃ", "thi"), ("ちぇ", "che"), ("うぇ", "we"),
+                 ("でぃ", "di"), ("しぇ", "she"), ("ゔ", "vu")]
+        for reading, typed in cases:
+            m, res = _type(reading, typed)
+            self.assertTrue(m.done, f"{reading} via {typed} not done")
+            self.assertNotIn("wrong", res, f"{reading} via {typed} had wrong")
+
+    def test_loanword_words_fully_ascii(self):
+        from split_typing.romaji import build_segments
+        for reading in ("ぱーてぃー", "ちぇっく", "うぇぶ", "でぃすく", "しぇあ"):
+            for seg in build_segments(reading):
+                for v in seg:
+                    self.assertTrue(v.isascii(), f"{reading}: non-ascii variant {v!r}")
+
 
 class TestMatcherAux(unittest.TestCase):
     def test_backspace(self):

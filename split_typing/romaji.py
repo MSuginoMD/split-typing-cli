@@ -68,6 +68,16 @@ ROMAJI_TABLE: dict[str, list[str]] = {
     "ぴゃ": ["pya"], "ぴゅ": ["pyu"], "ぴょ": ["pyo"],
     # ふ combinations (small vowels)
     "ふぁ": ["fa"], "ふぃ": ["fi"], "ふぇ": ["fe"], "ふぉ": ["fo"],
+    # loanword (katakana) small-vowel combos
+    "うぃ": ["wi", "whi"], "うぇ": ["we", "whe"], "うぉ": ["who"],
+    "ゔ": ["vu"], "ゔぁ": ["va"], "ゔぃ": ["vi"], "ゔぇ": ["ve"], "ゔぉ": ["vo"],
+    "しぇ": ["she", "sye"], "じぇ": ["je", "jye", "zye"],
+    "ちぇ": ["che", "tye", "cye"], "ぢぇ": ["dye"],
+    "てぃ": ["thi", "ti"], "でぃ": ["dhi", "di"],
+    "てゅ": ["thu", "tyu"], "でゅ": ["dhu", "dyu"],
+    "とぅ": ["twu"], "どぅ": ["dwu"],
+    "ふゅ": ["fyu"], "ふょ": ["fyo"],
+    "いぇ": ["ye"],
     # small standalone vowels (rare)
     "ぁ": ["la", "xa"], "ぃ": ["li", "xi"], "ぅ": ["lu", "xu"],
     "ぇ": ["le", "xe"], "ぉ": ["lo", "xo"],

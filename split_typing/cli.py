@@ -9,6 +9,7 @@ from split_typing.engine import RealtimeSession, Score, score_attempt
 from split_typing.input_capture import read_keys, supports_raw
 from split_typing.llm import generate_prompts
 from split_typing.prompts import available_languages, get_prompts, levels_for_language
+from split_typing import reading
 from split_typing.reading import to_hiragana
 from split_typing.stats import KeyStats
 
@@ -55,6 +56,13 @@ def main(argv: list[str] | None = None) -> int:
         prompts = get_prompts(language, level, count, args.seed)
 
     use_realtime = not args.classic and supports_raw()
+
+    if use_realtime and language == "japanese" and not reading.pykakasi_available():
+        print(
+            "Warning: pykakasi is not installed; kanji cannot be converted to hiragana.\n"
+            "Falling back to classic (line-input) mode."
+        )
+        use_realtime = False
 
     if use_realtime:
         if args.adaptive:
