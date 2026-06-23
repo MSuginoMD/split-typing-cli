@@ -71,6 +71,9 @@ ROMAJI_TABLE: dict[str, list[str]] = {
     # small standalone vowels (rare)
     "ぁ": ["la", "xa"], "ぃ": ["li", "xi"], "ぅ": ["lu", "xu"],
     "ぇ": ["le", "xe"], "ぉ": ["lo", "xo"],
+    # punctuation (type ASCII with IME off; full-width also accepted)
+    "、": [",", "、"],
+    "。": [".", "。"],
 }
 
 

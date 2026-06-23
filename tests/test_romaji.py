@@ -32,13 +32,16 @@ class TestRomajiVariants(unittest.TestCase):
 
     def test_passthrough(self):
         self.assertEqual(romaji_variants(" "), [" "])
-        self.assertEqual(romaji_variants("、"), ["、"])
 
     def test_dji_youon_present(self):
         self.assertEqual(romaji_variants("ぢゃ"), ["dya", "jya"])
 
     def test_chi_youon_has_cya(self):
         self.assertIn("cya", romaji_variants("ちゃ"))
+
+    def test_punctuation_maps_to_ascii(self):
+        self.assertIn(",", romaji_variants("、"))
+        self.assertIn(".", romaji_variants("。"))
 
 
 class TestBuildSegments(unittest.TestCase):
@@ -109,6 +112,11 @@ class TestRomajiMatcher(unittest.TestCase):
 
     def test_standalone_n_double(self):
         m, res = _type("ん", "nn")
+        self.assertTrue(m.done)
+        self.assertNotIn("wrong", res)
+
+    def test_sentence_punctuation_typable(self):
+        m, res = _type("あ。", "a.")
         self.assertTrue(m.done)
         self.assertNotIn("wrong", res)
 
