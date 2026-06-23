@@ -46,5 +46,23 @@ class EngineTests(unittest.TestCase):
         self.assertGreater(result.cpm, 0)
 
 
+from pathlib import Path
+from split_typing.engine import RealtimeSession
+from split_typing.stats import KeyStats
+
+
+class TestRealtimeSession(unittest.TestCase):
+    def test_completes_and_counts_errors(self):
+        s = KeyStats(Path("/tmp/unused.json"), {})
+        sess = RealtimeSession("か", stats=s)
+        self.assertEqual(sess.key("x", 100.0), "wrong")
+        self.assertEqual(sess.key("k", 90.0), "correct")
+        self.assertEqual(sess.key("a", 80.0), "complete")
+        self.assertTrue(sess.done)
+        self.assertEqual(sess.errors, 1)
+        self.assertEqual(s.data["x"]["errors"], 1)
+        self.assertEqual(s.data["k"]["errors"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
