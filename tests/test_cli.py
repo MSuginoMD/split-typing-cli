@@ -6,7 +6,15 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 from split_typing.stats import KeyStats
 import split_typing.cli as cli
-from split_typing.cli import build_parser, print_weak_keys, choose_language, choose_level, choose_yes_no
+from split_typing.cli import (
+    build_parser,
+    print_weak_keys,
+    print_realtime_summary,
+    choose_language,
+    choose_level,
+    choose_count,
+    choose_yes_no,
+)
 
 
 class TestCliPlumbing(unittest.TestCase):
@@ -56,6 +64,18 @@ class TestInteractiveMenus(unittest.TestCase):
         with mock.patch("builtins.input", side_effect=["3"]), redirect_stdout(io.StringIO()):
             self.assertEqual(choose_level("japanese"), 3)
 
+    def test_choose_count_default_on_empty(self):
+        with mock.patch("builtins.input", side_effect=[""]):
+            self.assertEqual(choose_count(default=5), 5)
+
+    def test_choose_count_number(self):
+        with mock.patch("builtins.input", side_effect=["8"]):
+            self.assertEqual(choose_count(default=5), 8)
+
+    def test_choose_count_rejects_then_accepts(self):
+        with mock.patch("builtins.input", side_effect=["0", "abc", "3"]), redirect_stdout(io.StringIO()):
+            self.assertEqual(choose_count(default=5), 3)
+
     def test_choose_yes_no_default_and_answers(self):
         with mock.patch("builtins.input", side_effect=[""]):
             self.assertFalse(choose_yes_no("q", default=False))
@@ -65,6 +85,18 @@ class TestInteractiveMenus(unittest.TestCase):
             self.assertTrue(choose_yes_no("q"))
         with mock.patch("builtins.input", side_effect=["n"]):
             self.assertFalse(choose_yes_no("q"))
+
+
+class TestRealtimeSummary(unittest.TestCase):
+    def test_summary_shows_counts_and_weak_keys(self):
+        s = KeyStats(Path("/tmp/unused.json"), {})
+        s.record("z", 400.0, error=True)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_realtime_summary(completed=2, total=3, errors=1, stats=s)
+        out = buf.getvalue()
+        self.assertIn("2/3", out)
+        self.assertIn("z", out)
 
 
 class TestRealtimeEntry(unittest.TestCase):

@@ -38,7 +38,9 @@ This installs the `split-typing` command and the `pykakasi` dependency automatic
 split-typing
 ```
 
-Prompts for language and level interactively.
+Launches a menu that prompts for language, level, number of prompts, whether to
+focus on your weak keys (adaptive), and whether to use the optional Ollama
+generator. After a realtime session it prints a summary with your weakest keys.
 
 ### Specify track, level, and count
 

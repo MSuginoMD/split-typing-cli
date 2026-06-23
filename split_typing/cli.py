@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Split keyboard typing trainer")
     parser.add_argument("--language", choices=available_languages(), help="practice track")
     parser.add_argument("--level", type=int, choices=(1, 2, 3, 4), help="difficulty level")
-    parser.add_argument("--count", type=int, default=5, help="number of prompts")
+    parser.add_argument("--count", type=int, default=None, help="number of prompts (default 5)")
     parser.add_argument("--seed", type=int, help="deterministic fixed prompt selection")
     parser.add_argument("--llm", action="store_true", help="try generating prompts with Ollama")
     parser.add_argument("--model", default="gemma4:26b", help="Ollama model name")
@@ -47,7 +47,16 @@ def main(argv: list[str] | None = None) -> int:
 
     language = args.language or choose_language()
     level = args.level or choose_level(language)
-    count = max(args.count, 1)
+    if args.count is not None:
+        count = max(args.count, 1)
+    elif interactive:
+        count = choose_count()
+    else:
+        count = 5
+
+    use_adaptive = args.adaptive
+    if interactive and not use_adaptive:
+        use_adaptive = choose_yes_no("Focus on your weak keys (adaptive)?", default=False)
 
     use_llm = args.llm
     if interactive and not use_llm:
@@ -75,11 +84,9 @@ def main(argv: list[str] | None = None) -> int:
         use_realtime = False
 
     if use_realtime:
-        if args.adaptive:
-            stats = KeyStats.load()
+        stats = KeyStats.load()
+        if use_adaptive:
             prompts = select_adaptive(prompts, language, stats, count, args.seed)
-        else:
-            stats = KeyStats.load()
 
         color = not args.no_color
         pairs = [
@@ -88,14 +95,20 @@ def main(argv: list[str] | None = None) -> int:
         ]
         print(f"\nTrack: {language}  Level: {level}  Prompts: {len(pairs)}")
         print("Type each prompt. ESC/Tab to skip, Ctrl-C to quit.\n")
+        completed = 0
+        session_errors = 0
         try:
             for index, (display, reading_kana) in enumerate(pairs, start=1):
                 print(f"[{index}/{len(pairs)}] ", end="")
-                run_realtime_prompt(display, reading_kana, stats, color)
+                sess = run_realtime_prompt(display, reading_kana, stats, color)
+                if sess.done:
+                    completed += 1
+                session_errors += sess.errors
         except KeyboardInterrupt:
             print()
         finally:
             stats.save()
+        print_realtime_summary(completed, len(pairs), session_errors, stats)
         return 0
 
     scores = run_session(language, level, prompts)
@@ -137,6 +150,16 @@ def choose_level(language: str) -> int:
         print("Choose one of: " + ", ".join(str(lvl) for lvl in levels))
 
 
+def choose_count(default: int = 5) -> int:
+    while True:
+        choice = input(f"how many prompts? [default {default}]> ").strip()
+        if not choice:
+            return default
+        if choice.isdigit() and int(choice) >= 1:
+            return int(choice)
+        print("Enter a positive number (or press Enter for %d)." % default)
+
+
 def choose_yes_no(question: str, default: bool = False) -> bool:
     suffix = " [y/N]> " if not default else " [Y/n]> "
     while True:
@@ -171,7 +194,7 @@ def _render(sess: RealtimeSession, color: bool) -> None:
     print(line, end="", flush=True)
 
 
-def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool) -> bool:
+def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool) -> RealtimeSession:
     sess = RealtimeSession(reading, stats=stats)
     print(display)
     last = time.perf_counter()
@@ -179,7 +202,7 @@ def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool
     for ch in keys:
         if ch in ("\x1b", "\t"):   # ESC / Tab -> skip prompt
             print("  [skipped]")
-            return False
+            return sess
         now = time.perf_counter()
         ms = (now - last) * 1000.0
         last = now
@@ -190,8 +213,17 @@ def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool
         _render(sess, color)
         if sess.done:
             print()
-            return True
-    return False
+            return sess
+    return sess
+
+
+def print_realtime_summary(completed: int, total: int, errors: int, stats: KeyStats) -> None:
+    print("\nSession summary")
+    print(f"  completed: {completed}/{total}")
+    print(f"  errors this session: {errors}")
+    print()
+    print_weak_keys(stats)
+    print("\nTip: run with --adaptive (or pick it at launch) to drill your weak keys.")
 
 
 def run_session(language: str, level: int, prompts: list[str]) -> list[Score]:
