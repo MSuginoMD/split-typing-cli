@@ -1,5 +1,5 @@
 import unittest
-from split_typing.romaji import tokenize_kana
+from split_typing.romaji import tokenize_kana, romaji_variants
 
 
 class TestTokenizeKana(unittest.TestCase):
@@ -17,3 +17,19 @@ class TestTokenizeKana(unittest.TestCase):
 
     def test_passthrough(self):
         self.assertEqual(tokenize_kana("あ、 a"), ["あ", "、", " ", "a"])
+
+
+class TestRomajiVariants(unittest.TestCase):
+    def test_multi_variant(self):
+        self.assertIn("shi", romaji_variants("し"))
+        self.assertIn("si", romaji_variants("し"))
+
+    def test_youon(self):
+        self.assertIn("kya", romaji_variants("きゃ"))
+
+    def test_particle_choices_present(self):
+        self.assertIn("wo", romaji_variants("を"))
+
+    def test_passthrough(self):
+        self.assertEqual(romaji_variants(" "), [" "])
+        self.assertEqual(romaji_variants("、"), ["、"])
