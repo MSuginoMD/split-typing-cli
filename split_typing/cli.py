@@ -70,10 +70,14 @@ def main(argv: list[str] | None = None) -> int:
         ]
         print(f"\nTrack: {language}  Level: {level}  Prompts: {len(pairs)}")
         print("Type each prompt. ESC/Tab to skip, Ctrl-C to quit.\n")
-        for index, (display, reading) in enumerate(pairs, start=1):
-            print(f"[{index}/{len(pairs)}] ", end="")
-            run_realtime_prompt(display, reading, stats, color)
-        stats.save()
+        try:
+            for index, (display, reading) in enumerate(pairs, start=1):
+                print(f"[{index}/{len(pairs)}] ", end="")
+                run_realtime_prompt(display, reading, stats, color)
+        except KeyboardInterrupt:
+            print()
+        finally:
+            stats.save()
         return 0
 
     scores = run_session(language, level, prompts)
