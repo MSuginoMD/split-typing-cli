@@ -10,6 +10,7 @@ from split_typing.cli import (
     build_parser,
     print_weak_keys,
     print_realtime_summary,
+    run_realtime_prompt,
     choose_language,
     choose_level,
     choose_count,
@@ -97,6 +98,37 @@ class TestRealtimeSummary(unittest.TestCase):
         out = buf.getvalue()
         self.assertIn("2/3", out)
         self.assertIn("z", out)
+
+
+class TestKeystrokeRecording(unittest.TestCase):
+    def test_ime_and_enter_not_recorded(self):
+        # User left IME on (gets レ) and hit Enter (\r) before typing romaji.
+        # Neither should land in stats; only the real ASCII keys for nihon do.
+        stats = KeyStats(Path("/tmp/unused.json"), {})
+        keys = ["レ", "\r", "n", "i", "h", "o", "n"]
+        with mock.patch.object(cli, "read_keys", lambda: iter(keys)), redirect_stdout(io.StringIO()):
+            sess = run_realtime_prompt("にほん", "にほん", stats, color=False)
+        self.assertTrue(sess.done)
+        self.assertNotIn("レ", stats.data)
+        self.assertNotIn("\r", stats.data)
+        self.assertIn("n", stats.data)
+        self.assertIn("i", stats.data)
+
+
+class TestResetStats(unittest.TestCase):
+    def test_reset_stats_flag_parses(self):
+        self.assertTrue(build_parser().parse_args(["--reset-stats"]).reset_stats)
+
+    def test_reset_stats_clears_file(self):
+        import json
+        import split_typing.stats as stats_mod
+        with TemporaryDirectory() as d:
+            p = Path(d) / "stats.json"
+            KeyStats(p, {"z": {"count": 1, "errors": 1, "total_ms": 9.0, "ema_ms": 9.0}}).save()
+            with mock.patch.object(stats_mod, "DEFAULT_PATH", p), redirect_stdout(io.StringIO()):
+                rc = cli.main(["--reset-stats"])
+            self.assertEqual(rc, 0)
+            self.assertEqual(json.loads(p.read_text()), {})
 
 
 class TestRealtimeEntry(unittest.TestCase):

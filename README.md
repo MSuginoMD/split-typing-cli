@@ -97,12 +97,15 @@ split-typing --list
 | `--count N` | Number of prompts per session (default 5) |
 | `--seed N` | Deterministic prompt selection |
 | `--no-color` | Disable ANSI colors |
+| `--reset-stats` | Clear saved key stats and exit |
 
 ---
 
 ## How Japanese Works
 
-1. **IME must be OFF.** You type raw romaji.
+1. **IME must be OFF.** You type raw romaji. (If the IME is on, the trainer
+   detects the non-ASCII input, warns you, and ignores it so your key stats
+   stay clean.)
 2. The trainer displays a natural Japanese sentence (kanji/kana).
 3. Internally, **pykakasi** converts it to a hiragana reading, which becomes the target.
 4. You type the romaji of that reading, one character at a time.

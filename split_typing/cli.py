@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--classic", action="store_true", help="line-input mode")
     parser.add_argument("--adaptive", action="store_true", help="bias prompts to weak keys")
     parser.add_argument("--stats", action="store_true", help="show weak keys and exit")
+    parser.add_argument("--reset-stats", action="store_true", help="clear saved key stats and exit")
     parser.add_argument("--no-color", action="store_true", help="disable ANSI color")
     return parser
 
@@ -38,6 +39,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.stats:
         stats = KeyStats.load()
         print_weak_keys(stats)
+        return 0
+
+    if args.reset_stats:
+        stats = KeyStats.load()
+        stats.data = {}
+        stats.save()
+        print("Key stats cleared.")
         return 0
 
     # Interactive launch: when the track wasn't given on the command line we
@@ -198,18 +206,28 @@ def run_realtime_prompt(display: str, reading: str, stats: KeyStats, color: bool
     sess = RealtimeSession(reading, stats=stats)
     print(display)
     last = time.perf_counter()
-    keys = read_keys()
-    for ch in keys:
-        if ch in ("\x1b", "\t"):   # ESC / Tab -> skip prompt
+    ime_warned = False
+    for ch in read_keys():
+        if ch in ("\x1b", "\t"):          # ESC / Tab -> skip prompt
             print("  [skipped]")
             return sess
+        if ch in ("\r", "\n"):            # Enter has no role in realtime mode
+            continue
+        if ch in ("\x7f", "\b"):          # backspace
+            sess.backspace()
+            _render(sess, color)
+            continue
+        if not ch.isascii():              # non-ASCII => IME is on; don't record
+            if not ime_warned:
+                print("\n  (Your IME looks ON. Switch to direct/ASCII input and type romaji.)")
+                ime_warned = True
+            continue
+        if not ch.isprintable():          # stray control characters: ignore
+            continue
         now = time.perf_counter()
         ms = (now - last) * 1000.0
         last = now
-        if ch in ("\x7f", "\b"):
-            sess.backspace()
-        else:
-            sess.key(ch, ms)
+        sess.key(ch, ms)
         _render(sess, color)
         if sess.done:
             print()
